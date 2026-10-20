@@ -2,6 +2,10 @@
 
 A GitHub Actions workflow that makes 1 to 6 commits to `activity.log` once a day.
 
+It is scheduled at 20:07 IST with a backup at 22:07 IST, because GitHub sometimes delays or
+skips scheduled runs. Whichever run comes first logs the day; a run that finds the day already
+logged does nothing.
+
 ## Setup
 
 1. Push this repo to GitHub (public, or private with "Include private contributions" turned on in your profile settings).

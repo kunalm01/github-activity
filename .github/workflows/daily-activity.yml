@@ -2,12 +2,21 @@ name: daily-activity
 
 on:
   schedule:
-    # 17:00 UTC is 22:30 IST. Commits are timestamped at random times earlier that day.
-    - cron: "0 17 * * *"
+    # GitHub runs scheduled workflows on a best-effort basis and delays or drops the most runs
+    # at the top of the hour, so both times sit at :37. The second run is a backup: whichever
+    # runs first logs the day, and the other finds it done and exits.
+    # Commits are timestamped at random times earlier that day.
+    - cron: "37 14 * * *" # 20:07 IST
+    - cron: "37 16 * * *" # 22:07 IST
   workflow_dispatch:
 
 permissions:
   contents: write
+
+# Never let the two scheduled runs, or a manual run, overlap.
+concurrency:
+  group: daily-activity
+  cancel-in-progress: false
 
 jobs:
   commit:
@@ -27,6 +36,18 @@ jobs:
           fi
           git config user.name  "${GIT_NAME}"
           git config user.email "${GIT_EMAIL}"
+
+          # The day being logged, chosen by the same rule as the Python below: today in IST,
+          # or yesterday when the run lands before 10:00 IST. Each entry starts with its date.
+          if [ "$(TZ=Asia/Kolkata date +%H)" -lt 10 ]; then
+            day=$(TZ=Asia/Kolkata date -d yesterday +%F)
+          else
+            day=$(TZ=Asia/Kolkata date +%F)
+          fi
+          if grep -q "^${day}" activity.log; then
+            echo "${day} is already logged. Nothing to do."
+            exit 0
+          fi
 
           # Prints 1 to 6 sorted timestamps between 09:00 and 23:30 IST, never in the future.
           # If the run lands before 10:00 IST (a late or manual run), it uses the previous day.
